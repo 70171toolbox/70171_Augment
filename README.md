@@ -5,6 +5,11 @@
 Detection:
 
 Color, Sample, Mirror, Resize, Normalize
+## Demo
+VS Code:
+![image](https://github.com/70171toolbox/70171_Augment/blob/v2.2/augment_demo.gif)
+Dataset:
+![image](https://github.com/70171toolbox/70171_Augment/blob/v2.2/augment_demo2.gif)
 ## 尚未完成的功能
 Segmentation:
 
