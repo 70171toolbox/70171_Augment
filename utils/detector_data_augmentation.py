@@ -5,9 +5,9 @@
 import cv2
 import numpy as np
 import numpy.random as random
-from utils.normalize import Normalize
+from utils.standardization import Standardization
 
-
+# 對原圖像進行一連串Augment
 class Augmentation():
     def __init__(self, imgsize, mean, std):
         self.imgsize    = imgsize
@@ -16,10 +16,9 @@ class Augmentation():
         self.augmentation = Compose([
             Convertfromints(),
             Randomcolor(),
-            # Randomsample(),
+            Randomsample(),
             Randommirror(),
-            Resize(self.imgsize),
-            Normalize(self.mean, self.std),
+            Standardization(self.mean, self.std),
             Remove()
         ])
     def __call__(self, img, bboxes, labels):
@@ -28,15 +27,15 @@ class Augmentation():
         labels_a = list(map(np.int64, labels_a))
         return img_a, bboxes_a, labels_a
 
-# 原圖像的Resize 
+# 對原圖像進行Resize 
 class Original_Resize():
     def __init__(self, imgsize, mean, std):
         self.imgsize    = imgsize
         self.mean       = mean
         self.std        = std
         self.resize = Compose([
+            Standardization(self.mean, self.std),
             Resize(self.imgsize),
-            Normalize(self.mean, self.std),
             Remove()
         ])
     def __call__(self, img, bboxes, labels):
@@ -58,12 +57,12 @@ class Randomcolor():
     def __init__(self):
         self.brightness = Randombrightness(50)
         self.colorstep = [
-            Randomcontrast(0.5,1.5),
+            Randomcontrast(0.9,1.1),
             Convertaxissystem("HSV"),
-            Randomsaturation(0.5,1.5),
+            Randomsaturation(0.7,1.15),
             Randomhue(18),
             Convertaxissystem("BGR"),
-            Randomcontrast(0.5,1.5)
+            Randomcontrast(0.9,1.1)
         ]
         self.noise = Randomnoise()
     def __call__(self, img, bboxes, labels):
@@ -142,6 +141,12 @@ class Convertfromints():
     
 class Remove():
     def __call__(self, img, bboxes, labels):
+        if (img < 0 ).any():
+            img[img < 0 ] = 0
+        if (img > 255).any():
+            img[img > 255 ] = 255
+        img[:, :, ::1] = img[:, :, ::-1]
+        
         for i in range(len(bboxes)):
             for j in range(len(bboxes)):
                 if not 0<=bboxes[j, 0]<bboxes[j, 2] or not 0<=bboxes[j, 1]<bboxes[j, 3]:
@@ -211,7 +216,7 @@ class Randommirror():
         _, width, _ = img.shape
         if random.randint(2):
             img = img[:, ::-1]
-            img = img.copy()        #不知道為甚麼要這行
+            img = img.copy()
             bboxes[:, 0::2] = width-bboxes[:, 2::-2]-1
         return img,bboxes,labels
 
@@ -241,17 +246,6 @@ class Resize():
         bboxes = bboxes*r
         bboxes = bboxes.astype(np.int32)
         return img, bboxes, labels
-
-#將圖片RGB標準化
-# class Normailize():
-#     def __init__(self, mean, std):
-#         self.mean = np.array(mean, dtype=np.float32)
-#         self.std = np.array(std, dtype=np.float32)
-#     def __call__(self, img, bboxes, labels):
-#         img -= self.mean
-#         img /= self.std
-#         return img, bboxes, labels
-
 
 
 def show_img(d, line):
@@ -455,7 +449,7 @@ if __name__ == "__main__":
         img = img.astype(np.float32)
         for i in range(len(bboxes)):
             cv2.rectangle(img,(bboxes[i,0],bboxes[i,1]),(bboxes[i,2],bboxes[i,3]),(255,255,255),1)
-        cv2.imshow("before",img/255)
+        cv2.imshow("before",img)
         print("原bboxes\n",bboxes)
         print("原labels\n",labels)
         img,bboxes,labels = a(img,bboxes,labels)
